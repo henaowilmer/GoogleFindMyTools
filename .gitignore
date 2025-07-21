@@ -13,6 +13,7 @@
 .DS_Store
 .AppleDouble
 .LSOverride
+.env
 
 # Icon must end with two \r
 Icon
@@ -184,5 +185,5 @@ xcuserdata
 venv/
 
 *** Python cache***
-*.pyc  
+*.pyc
 # End of https://www.toptal.com/developers/gitignore/api/macos,xcode,swift,swiftpackagemanager,objective-c
