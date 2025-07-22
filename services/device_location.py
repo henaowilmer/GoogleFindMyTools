@@ -112,12 +112,26 @@ def save_device_location(device_id: str, location_time_array: list):
         if device and location_time_array:
             geo_locs = [
                 loc for loc in location_time_array if loc["type"] == "geo"]
-            loc_to_save = geo_locs[-1] if geo_locs else location_time_array[-1]
+
+            if not geo_locs:
+                loc_to_save = location_time_array[-1]
+            else:
+                geo_locs_sorted = sorted(
+                    geo_locs,
+                    key=lambda x: (
+                        x.get("accuracy", float('inf')),
+                        -datetime.strptime(x["time"],
+                                           '%Y-%m-%d %H:%M:%S').timestamp()
+                    )
+                )
+                loc_to_save = geo_locs_sorted[0]
+
             latitude = loc_to_save.get("latitude")
             longitude = loc_to_save.get("longitude")
             timestamp = datetime.strptime(
                 loc_to_save["time"], '%Y-%m-%d %H:%M:%S')
             bogota_tz = pytz.timezone("America/Bogota")
+            timestamp = bogota_tz.localize(timestamp).replace(tzinfo=None)
             now_naive = datetime.now(bogota_tz).replace(tzinfo=None)
             tag_location = TagLocation(
                 tag_device_id=device.id,
