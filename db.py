@@ -15,7 +15,11 @@ class Device(Base):
     name = Column(String, nullable=False)
     canonic_id = Column(String, nullable=False, unique=True)
     nickname = Column(String, nullable=True)
-    user_id = Column(Integer, nullable=True)
+    company_id = Column(Integer, nullable=True)
+    svg = Column(String, nullable=True)
+    svg_color = Column(String, nullable=True)
+    updated_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, nullable=False)
 
     __table_args__ = (
         UniqueConstraint('canonic_id', name='uix_tag_canonic_id'),
