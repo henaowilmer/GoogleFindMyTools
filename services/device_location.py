@@ -100,8 +100,11 @@ def save_device_location(device_id: str, location_time_array: list):
     """
     Guarda la última ubicación del dispositivo en la base de datos.
     Si la tabla no existe, la crea automáticamente.
+    También valida geofences si existen.
     """
     from db import SessionLocal, Device, TagLocation, get_engine, create_tables
+    from services.geofence_service import GeofenceService
+
     session = SessionLocal()
     try:
         # Verificar y crear la tabla si no existe
@@ -142,6 +145,13 @@ def save_device_location(device_id: str, location_time_array: list):
             )
             session.add(tag_location)
             session.commit()
+
+            # Validate geofences if coordinates are available
+            if latitude is not None and longitude is not None:
+                geofence_service = GeofenceService()
+                geofence_service.get_geofences(
+                    device.id, latitude, longitude, timestamp)
+
     except Exception as e:
         session.rollback()
         print(f"Error guardando ubicación: {e}")
