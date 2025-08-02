@@ -1,6 +1,6 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from services.device_list import get_devices
-from app.shared_executor import shared_executor
+from app.shared_executor import scheduler_executor
 import logging
 import asyncio
 
@@ -11,7 +11,7 @@ scheduler = AsyncIOScheduler()
 async def scheduled_get_devices():
     try:
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(shared_executor, get_devices)
+        await loop.run_in_executor(scheduler_executor, get_devices)
         logger.info("Tarea programada get_devices completada exitosamente")
     except Exception as e:
         logger.error(f"Error en tarea programada get_devices: {e}")

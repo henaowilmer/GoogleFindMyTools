@@ -3,18 +3,21 @@ from typing import List, Dict, Any
 import asyncio
 from app.shared_executor import shared_executor
 from services import device_list, device_location, device_ring
-from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
 
 @router.get("/devices", response_model=List[Dict])
-def list_devices():
+async def list_devices():
     """
     Lista los dispositivos disponibles y sus IDs canónicos.
     """
-    try:
+    def blocking_list_lookup():
         return device_list.get_devices()
+    try:
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(shared_executor, blocking_list_lookup)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
