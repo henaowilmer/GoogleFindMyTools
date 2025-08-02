@@ -107,9 +107,6 @@ def save_device_location(device_id: str, location_time_array: list):
 
     session = SessionLocal()
     try:
-        # Verificar y crear la tabla si no existe
-        engine = get_engine()
-        create_tables(engine)
         # Buscar el tag_device_id usando el canonic_id
         device = session.query(Device).filter_by(canonic_id=device_id).first()
         if device and location_time_array:
@@ -122,7 +119,6 @@ def save_device_location(device_id: str, location_time_array: list):
                 geo_locs_sorted = sorted(
                     geo_locs,
                     key=lambda x: (
-                        x.get("accuracy", float('inf')),
                         -datetime.strptime(x["time"],
                                            '%Y-%m-%d %H:%M:%S').timestamp()
                     )
