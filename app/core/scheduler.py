@@ -1,14 +1,21 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from services.device_list import get_devices
 import logging
+import asyncio
+import concurrent.futures
 
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
 
+# Crear un ThreadPoolExecutor reutilizable
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
 
-def scheduled_get_devices():
+
+async def scheduled_get_devices():
     try:
-        get_devices()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(executor, get_devices)
+        logger.info("Tarea programada get_devices completada exitosamente")
     except Exception as e:
         logger.error(f"Error en tarea programada get_devices: {e}")
 

@@ -50,8 +50,3 @@ async def ring_device(device_id: str):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.api_route("/health", methods=["GET", "HEAD"])
-async def health():
-    return JSONResponse(content={"status": "ok"}, status_code=200)
