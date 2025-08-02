@@ -36,7 +36,15 @@ def get_device_location(device_id: str) -> Dict[str, Any]:
     nova_request(NOVA_ACTION_API_SCOPE, hex_payload)
 
     while result is None:
-        asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
+        import time
+        start_time = time.time()
+        timeout = 60
+
+        while result is None and (time.time() - start_time) < timeout:
+            asyncio.get_event_loop().run_until_complete(asyncio.sleep(0.1))
+
+        if result is None:
+            raise Exception(f"Timeout waiting for location response after {timeout} seconds")  # noqa: E501
 
     device_registration = result.deviceMetadata.information.deviceRegistration
     identity_key = decrypt_locations.retrieve_identity_key(device_registration)

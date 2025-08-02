@@ -1,14 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 import asyncio
-import concurrent.futures
+from app.shared_executor import shared_executor
 from services import device_list, device_location, device_ring
 from fastapi.responses import JSONResponse
 
 router = APIRouter()
-
-# Crear un ThreadPoolExecutor reutilizable
-executor = concurrent.futures.ThreadPoolExecutor(max_workers=4)
 
 
 @router.get("/devices", response_model=List[Dict])
@@ -31,7 +28,7 @@ async def get_device_location(device_id: str):
         return device_location.get_device_location(device_id)
     try:
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(executor, blocking_location_lookup, device_id)
+        result = await loop.run_in_executor(shared_executor, blocking_location_lookup, device_id)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -46,7 +43,7 @@ async def ring_device(device_id: str):
         return device_ring.ring_device(device_id)
     try:
         loop = asyncio.get_running_loop()
-        result = await loop.run_in_executor(executor, blocking_ring, device_id)
+        result = await loop.run_in_executor(shared_executor, blocking_ring, device_id)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
