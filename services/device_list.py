@@ -29,5 +29,4 @@ def get_devices() -> List[Dict]:
         except Exception as e:
             location = {"error": str(e)}
         devices.append({"name": name, "id": canonic_id, "location": location})
-    print(f"Devices: {devices}")
     return devices

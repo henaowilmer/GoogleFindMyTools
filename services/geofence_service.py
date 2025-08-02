@@ -51,16 +51,10 @@ class GeofenceService:
                         alert_port = os.getenv('PORT_SERVICE_WHATSAPP', '3000')
                         alert_url = f'http://{alert_host}:{alert_port}/sendAlert'
 
-                        print(f'Sending WhatsApp to: {alert_url}')
-                        print(f'Phone: {user.phone}')
-
                         response = requests.post(alert_url, json={
                             'body': body_whatsapp,
                             'phone': user.phone
                         }, timeout=10)
-
-                        print(f'Response status: {response.status_code}')
-                        print(f'Response text: {response.text}')
 
                     except requests.exceptions.Timeout:
                         print(f'Timeout error connecting to WhatsApp service at {alert_url}')  # noqa 501
