@@ -106,7 +106,8 @@ def get_device_location(device_id: str) -> Dict[str, Any]:
 
 def save_device_location(device_id: str, location_time_array: list):
     """
-    Guarda la última ubicación del dispositivo en la base de datos.
+    Guarda la ubicación más confiable del dispositivo en la base de datos.
+    Calcula un puntaje balanceado entre confiabilidad (accuracy) y recencia.
     Si la tabla no existe, la crea automáticamente.
     También valida geofences si existen.
     """
@@ -118,21 +119,52 @@ def save_device_location(device_id: str, location_time_array: list):
         # Buscar el tag_device_id usando el canonic_id
         device = session.query(Device).filter_by(canonic_id=device_id).first()
         if device and location_time_array:
+            device_pk_id = int(device.id)  # type: ignore
             geo_locs = [
                 loc for loc in location_time_array if loc["type"] == "geo"]
 
             if not geo_locs:
+                # Si no hay ubicaciones geo, guardar solo la última
                 loc_to_save = location_time_array[-1]
             else:
-                geo_locs_sorted = sorted(
-                    geo_locs,
-                    key=lambda x: (
-                        -datetime.strptime(x["time"],
-                                           '%Y-%m-%d %H:%M:%S').timestamp()
-                    )
-                )
-                loc_to_save = geo_locs_sorted[0]
+                # Obtener la mejor ubicación (balance entre confiabilidad y recencia)
+                # Calcular puntaje para cada ubicación
+                # Puntaje = (peso_recencia * score_recencia) + (peso_accuracy * score_accuracy)
+                max_timestamp = max(datetime.strptime(loc["time"], '%Y-%m-%d %H:%M:%S').timestamp() 
+                                   for loc in geo_locs)
+                min_timestamp = min(datetime.strptime(loc["time"], '%Y-%m-%d %H:%M:%S').timestamp() 
+                                   for loc in geo_locs)
+                time_range = max_timestamp - min_timestamp if max_timestamp != min_timestamp else 1
+                
+                # Obtener rango de accuracy (menor es mejor)
+                accuracies = [loc.get("accuracy", 10000) for loc in geo_locs]
+                max_accuracy = max(accuracies)
+                min_accuracy = min(accuracies)
+                accuracy_range = max_accuracy - min_accuracy if max_accuracy != min_accuracy else 1
 
+                def calculate_score(loc):
+                    """
+                    Calcula un puntaje balanceado entre recencia y precisión.
+                    - Recencia: 40% del peso (más reciente = mejor)
+                    - Accuracy: 60% del peso (menor accuracy = mejor)
+                    """
+                    timestamp = datetime.strptime(loc["time"], '%Y-%m-%d %H:%M:%S').timestamp()
+                    accuracy = loc.get("accuracy", 10000)
+                    
+                    # Normalizar recencia (0-1, donde 1 es lo más reciente)
+                    recency_score = (timestamp - min_timestamp) / time_range if time_range > 0 else 1
+                    
+                    # Normalizar accuracy inversamente (0-1, donde 1 es la mejor precisión)
+                    accuracy_score = 1 - ((accuracy - min_accuracy) / accuracy_range) if accuracy_range > 0 else 1
+                    
+                    # Puntaje final: 40% recencia + 60% accuracy
+                    final_score = (0.4 * recency_score) + (0.6 * accuracy_score)
+                    return final_score
+
+                # Encontrar la ubicación con el mejor puntaje
+                loc_to_save = max(geo_locs, key=calculate_score)
+
+            # Guardar la ubicación más confiable
             latitude = loc_to_save.get("latitude")
             longitude = loc_to_save.get("longitude")
             timestamp = datetime.strptime(
@@ -140,8 +172,9 @@ def save_device_location(device_id: str, location_time_array: list):
             bogota_tz = pytz.timezone("America/Bogota")
             timestamp = bogota_tz.localize(timestamp).replace(tzinfo=None)
             now_naive = datetime.now(bogota_tz).replace(tzinfo=None)
+            
             tag_location = TagLocation(
-                tag_device_id=device.id,
+                tag_device_id=device_pk_id,
                 latitude=latitude,
                 longitude=longitude,
                 timestamp=timestamp,
@@ -154,7 +187,7 @@ def save_device_location(device_id: str, location_time_array: list):
             if latitude is not None and longitude is not None:
                 geofence_service = GeofenceService()
                 geofence_service.get_geofences(
-                    device.id, latitude, longitude, timestamp)
+                    device_pk_id, latitude, longitude, timestamp)
 
     except Exception as e:
         session.rollback()
